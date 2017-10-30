@@ -6,28 +6,39 @@ except ImportError:
 	# for python3
 	from tkinter import *
 	from tkinter import filedialog
+
+import numpy as np
+import matplotlib.pyplot as plt
+
 import scipy
 import scipy.io
 import scipy.io.wavfile as wavfile
+
 mainWindow=Tk()
-# file = tkFileDialog.askopenfile(parent=mainWindow,mode='rb',title='Choose a file')
-# if file != None:
-#     data = file.read()
-#     file.close()
-#     print("I got %d bytes from this file.") % len(data)
-logo = PhotoImage(file="./smilingpython.gif")
-label=Label(mainWindow,image=logo,text="Nguyen Dinh Hung")
+image = PhotoImage(file="./smilingpython.gif")
+label=Label(mainWindow,image=image,text="Nguyen Dinh Hung")
 label.grid(row=0,column=1)
 
 def show():
 	print("Ban vua bam nut "+label['text'])
 	
-	filename =  filedialog.askopenfilename(initialdir = "~/Music",title = "Choose your file",filetypes = (("mp3 files","*.mp3"),("wav files","*.wav"),("all files","*.*")))
-	tmp=wavfile.read(filename)
-	print(tmp)	
+	filename =  filedialog.askopenfilename(initialdir = "~/Music",title = "Choose your file",filetypes = (("wav files","*.wav"),("mp3 files","*.mp3"),("all files","*.*")))
+	if not filename is None:
+		fs, data = wavfile.read(filename)
+		print(fs)
+		print(data)
+		X = np.linspace(-np.pi, np.pi, 256, endpoint=True)
+		print(X)
+		C, S = np.cos(X), np.sin(X)
 
-button=Button(mainWindow,text="button",command=show)
+		plt.plot(X, C)
+		plt.plot(X, S)
+
+		plt.show()
+
+button=Button(mainWindow,text="Choose file",command=show)
 button.grid(row=1,column=1)
 
 mainWindow.geometry('280x350+500+200')
+mainWindow.title("いいね")
 mainWindow.mainloop()
