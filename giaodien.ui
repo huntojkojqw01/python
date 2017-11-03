@@ -10,22 +10,21 @@
     </layout>
     <child>
       <object class="tk.Button" id="Button_1">
-        <property name="command">show</property>
-        <property name="text" translatable="yes">Button_1</property>
+        <property name="command">choosefile</property>
+        <property name="text" translatable="yes">Choose file</property>
         <layout>
           <property name="column">0</property>
           <property name="propagate">True</property>
           <property name="row">1</property>
-          <property name="sticky">n</property>
         </layout>
       </object>
     </child>
     <child>
       <object class="tk.Button" id="Button_2">
-        <property name="command">showfft</property>
-        <property name="text" translatable="yes">Button_2</property>
+        <property name="command">playwav</property>
+        <property name="text" translatable="yes">Play</property>
         <layout>
-          <property name="column">0</property>
+          <property name="column">1</property>
           <property name="propagate">True</property>
           <property name="row">1</property>
         </layout>
@@ -33,13 +32,13 @@
     </child>
     <child>
       <object class="tk.Button" id="Button_3">
-        <property name="command">quit</property>
-        <property name="text" translatable="yes">Button_3</property>
+        <property name="command">showfft</property>
+        <property name="compound">top</property>
+        <property name="text" translatable="yes">FFT</property>
         <layout>
-          <property name="column">0</property>
+          <property name="column">2</property>
           <property name="propagate">True</property>
           <property name="row">1</property>
-          <property name="sticky">s</property>
         </layout>
       </object>
     </child>
@@ -47,12 +46,35 @@
       <object class="tk.Label" id="Label_1">
         <property name="image">smilingpython.gif</property>
         <property name="relief">flat</property>
+        <property name="state">normal</property>
         <property name="text" translatable="yes">Label_1</property>
         <layout>
-          <property name="column">1</property>
+          <property name="column">0</property>
+          <property name="propagate">True</property>
+          <property name="row">2</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="ttk.Button" id="Button_4">
+        <property name="command">quit</property>
+        <property name="text" translatable="yes">Quit</property>
+        <layout>
+          <property name="column">3</property>
           <property name="propagate">True</property>
           <property name="row">1</property>
-          <property name="rowspan">3</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Canvas" id="Canvas_1">
+        <property name="background">#d9d9ae</property>
+        <layout>
+          <property name="column">1</property>
+          <property name="columnspan">4</property>
+          <property name="propagate">True</property>
+          <property name="row">2</property>
+          <property name="sticky">n</property>
         </layout>
       </object>
     </child>
