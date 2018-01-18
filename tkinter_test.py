@@ -20,7 +20,7 @@ mainWindow=Tk()
 
 fig, ax = plt.subplots(2, 1, num='Sound Diagram')
 fig.suptitle('wav file', fontsize=20)
-FRAME_DURATION = 0.02
+FRAME_DURATION = 0.04
 frame_length = None
 time_array = None
 filename = "./khoosoothunhus.wav"
@@ -130,21 +130,88 @@ def xac_dinh_khoang_lang():
     ax[0].axvspan(diem_dau / fs, diem_cuoi / fs, facecolor='g', alpha=0.5)
   fig.show()
 
-def ham_tu_tuong_quan_R_k(frame_length, array, i): # i la chi so bat dau cuar frame dang xet.
+def ham_tu_tuong_quan_R_k(frame_length, array): # i la chi so bat dau cua frame dang xet.
   N = frame_length
   K = (int)(4*N/5)
 
   R = []
   for k in range(0, K):
     sum = 0
-    for n in range(i, i + N - k -1):
+    for n in range(0, N - k):
       sum += array[n] * array[n + k]
     R.append(sum)  
   return R
+def cuc_dai_tiep_theo_cua_R(array):
+  array_length = len(array)
+  cuc_tieu_dau_tien = array.index(min(array[1:array_length]))
+  return array.index(max(array[cuc_tieu_dau_tien+1:array_length]))
 def tinh_f0():
-  global data,fs,filename,ax,fig,time_array,frame_length  
-  t = ham_tu_tuong_quan_R_k(frame_length, data, i)
-  ax[1].plot(t)
+  global data,fs,filename,ax,fig,time_array,frame_length
+  if fs == None:
+    return None
+  ax[1].clear()
+  fig.show()  
+  
+  # Lay frame length tu tren giao dien:  
+  try:
+    tmp = float(entry.get())
+    if tmp <= 0:
+      return None
+    else:
+      frame_length = int(tmp * fs)
+  except ValueError:
+    # print("Oops!  Hay nhap gia tri frame length hop le vao !")      
+    frame_length = int(FRAME_DURATION * fs)
+  #----------------------------------------  
+
+  data_length = len(data)
+  if data_length % frame_length == 0:
+    number_of_frame = int(data_length / frame_length)
+  else:
+    number_of_frame = int(data_length / frame_length) + 1
+
+  print("Frame length: ", frame_length)
+  print("Number frame: ", number_of_frame)
+  
+  energy_array = []  
+  half_frame_length = (int)(frame_length/2)
+
+  for i in range(0, data_length, half_frame_length):
+    if i + half_frame_length >= data_length:
+      energy_array.append(sum(np.power(data[i:data_length], 2)))
+    else:
+      energy_array.append(sum(np.power(data[i:(i + half_frame_length)], 2)))
+  print("So luong tong: ", np.array(energy_array).size)
+  
+  # Lay gia tri nguong nang luong tu giao dien:
+  nguong_nang_luong = None
+  try:
+    nguong_nang_luong = (float)(entry2.get())
+    if nguong_nang_luong <= 0:
+      return None    
+  except ValueError:
+    # print("Oops!  Hay nhap gia tri muc nang luong hop le vao !")
+    nguong_nang_luong = 2  
+  #-----------  
+  count = 0
+  # danh_sach_tan_so = []
+  for i in range(0, len(energy_array)):
+    if i == len(energy_array) - 1:
+      nang_luong_cua_frame_nay = math.sqrt(energy_array[i] )
+    else:
+      nang_luong_cua_frame_nay = math.sqrt(energy_array[i] + energy_array[i + 1])
+    toa_do_cua_frame_nay = i * half_frame_length
+    if nang_luong_cua_frame_nay >= nguong_nang_luong:
+      count += 1
+      t = ham_tu_tuong_quan_R_k(frame_length, data[toa_do_cua_frame_nay:toa_do_cua_frame_nay+frame_length])
+      chu_ky = cuc_dai_tiep_theo_cua_R(t)
+      # danh_sach_tan_so.append(1.0/chu_ky)
+      if count == 1:
+        ax[1].plot(t)        
+        ax[1].axvline(x=chu_ky, color='orange', linestyle='-')        
+        print("Tan so la",1.0/chu_ky)                
+        # break    
+  # axs[2].plot(danh_sach_tan_so)
   fig.show()
 
 def quit():
