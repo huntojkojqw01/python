@@ -10,15 +10,13 @@ except ImportError:
 import numpy as np
 from numpy import arange
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import math
 import scipy
 import scipy.io
 import scipy.io.wavfile as wavfile
 
 mainWindow=Tk()
-# image = PhotoImage(file="./smilingpython.gif")
-# label=Label(mainWindow,image=image,text="Nguyen Dinh Hung")
-# label.grid(row=0,column=1)
 
 fig, ax = plt.subplots(2, 1, num='Sound Diagram')
 fig.suptitle('wav file', fontsize=20)
@@ -32,16 +30,17 @@ fs = None
 def show():  
   global data,fs,filename,ax,fig,time_array,frame_length
   
-  filename =  filedialog.askopenfilename(initialdir = "./",title = "Choose your file",filetypes = (("wav files","*.wav"),("mp3 files","*.mp3"),("all files","*.*")))
+  filename =  filedialog.askopenfilename(initialdir = "./",
+    title = "Choose your file",
+    filetypes = (("wav files","*.wav"),("mp3 files","*.mp3"),("all files","*.*")))  
   
-  # print(filename)
   try:
     fs, data = wavfile.read(filename)
   except (TypeError, FileNotFoundError):
     print("Chua chon file hop le.")
     return None
   data = data / (2. ** 15)    
-  time_array=arange(0,len(data))/fs
+  time_array=arange(0, len(data)) / fs
   
   time = (float)(len(data) / fs);
   print("Fs: ", fs)
@@ -58,59 +57,95 @@ def xac_dinh_khoang_lang():
     return None
   ax[0].clear()
   fig.show()  
-  ax[0].plot(time_array, data)      
+  ax[0].plot(time_array, data, color="blue")      
   ax[0].set_xlabel('Time(s)')
-  ax[0].set_ylabel('Amplitude') 
+  ax[0].set_ylabel('Amplitude')   
   
-  # Lay frame length tu tren giao dien:
-  tmp = None
+  # Lay frame length tu tren giao dien:  
   try:
-    tmp = (float)(entry.get())
+    tmp = float(entry.get())
     if tmp <= 0:
       return None
+    else:
+      frame_length = int(tmp * fs)
   except ValueError:
-    print("Oops!  Hay nhap gia tri frame length hop le vao !")
-    tmp = FRAME_DURATION    
-  frame_length = (int)(tmp * fs)
-  #-----------------------------
+    # print("Oops!  Hay nhap gia tri frame length hop le vao !")      
+    frame_length = int(FRAME_DURATION * fs)
+  #----------------------------------------  
 
-  number_of_frame = int(len(data) / frame_length)  
+  data_length = len(data)
+  if data_length % frame_length == 0:
+    number_of_frame = int(data_length / frame_length)
+  else:
+    number_of_frame = int(data_length / frame_length) + 1
+
   print("Frame length: ", frame_length)
   print("Number frame: ", number_of_frame)
-  energy_array = []
-  for i in range(0, len(data) - 1, frame_length):
-    energy_array.append(sum(np.power(data[i:(i + frame_length - 1)], 2)))
-  # print(np.array(energy_array).size)
+  
+  energy_array = []  
+  half_frame_length = (int)(frame_length/2)
 
-  flag = 0 # flag = 0 tuc la dang trong khoang lang, khong co tieng noi.
+  for i in range(0, data_length, half_frame_length):
+    if i + half_frame_length >= data_length:
+      energy_array.append(sum(np.power(data[i:data_length], 2)))
+    else:
+      energy_array.append(sum(np.power(data[i:(i + half_frame_length)], 2)))
+  print("So luong tong: ", np.array(energy_array).size)
+  
+  dang_trong_khoang_lang = True # tuc la dang trong khoang lang, khong co tieng noi.
 
   # Lay gia tri nguong nang luong tu giao dien:
-  tmp = None
+  nguong_nang_luong = None
   try:
-    tmp = (float)(entry2.get())
-    if tmp <= 0:
+    nguong_nang_luong = (float)(entry2.get())
+    if nguong_nang_luong <= 0:
       return None    
   except ValueError:
-    print("Oops!  Hay nhap gia tri muc nang luong hop le vao !")
-    tmp = 0.5
-  nguong = tmp
+    # print("Oops!  Hay nhap gia tri muc nang luong hop le vao !")
+    nguong_nang_luong = 0.5  
   #-----------
-
-  for i in range(0, len(energy_array) - 1):
-    if math.sqrt(energy_array[i] + energy_array[i + 1]) >= nguong:
-      if flag == 0:          
-        ax[0].axvline(x=time_array[i*frame_length], color='blue', linestyle='-')
-        flag = 1                
+  diem_dau = diem_cuoi = 0
+  for i in range(0, len(energy_array)):
+    if i == len(energy_array) - 1:
+      nang_luong_cua_frame_nay = math.sqrt(energy_array[i] )
     else:
-      if flag == 1:
-        ax[0].axvline(x=time_array[i*frame_length], color='red', linestyle='--')
-        flag = 0
-  if flag == 1:
-    ax[0].axvline(x=time_array[i*frame_length], color='red', linestyle='--')
+      nang_luong_cua_frame_nay = math.sqrt(energy_array[i] + energy_array[i + 1])
+    toa_do_thoi_gian_cua_frame_nay = i * half_frame_length
+    if nang_luong_cua_frame_nay >= nguong_nang_luong:
+      if dang_trong_khoang_lang:          
+        # ax[0].axvline(x=toa_do_thoi_gian_cua_frame_nay / fs, color='black', linestyle='-')
+        diem_dau = toa_do_thoi_gian_cua_frame_nay
+        dang_trong_khoang_lang = False                
+    else:
+      if not dang_trong_khoang_lang:
+        # ax[0].axvline(x=toa_do_thoi_gian_cua_frame_nay / fs, color='black', linestyle='-')
+        diem_cuoi = toa_do_thoi_gian_cua_frame_nay
+        ax[0].plot(time_array[diem_dau:diem_cuoi], data[diem_dau:diem_cuoi], color="red")
+        ax[0].axvspan(diem_dau / fs, diem_cuoi / fs, facecolor='g', alpha=0.5)
+        dang_trong_khoang_lang = True
+  if not dang_trong_khoang_lang:    
+    # ax[0].axvline(x=toa_do_thoi_gian_cua_frame_nay / fs, color='black', linestyle='--')
+    diem_cuoi = toa_do_thoi_gian_cua_frame_nay
+    ax[0].plot(time_array[diem_dau:diem_cuoi], data[diem_dau:diem_cuoi], color="red")
+    ax[0].axvspan(diem_dau / fs, diem_cuoi / fs, facecolor='g', alpha=0.5)
   fig.show()
 
+def ham_tu_tuong_quan_R_k(frame_length, array, i): # i la chi so bat dau cuar frame dang xet.
+  N = frame_length
+  K = (int)(4*N/5)
+
+  R = []
+  for k in range(0, K):
+    sum = 0
+    for n in range(i, i + N - k -1):
+      sum += array[n] * array[n + k]
+    R.append(sum)  
+  return R
 def tinh_f0():
-  pass
+  global data,fs,filename,ax,fig,time_array,frame_length  
+  t = ham_tu_tuong_quan_R_k(frame_length, data, i)
+  ax[1].plot(t)
+  fig.show()
 
 def quit():
   mainWindow.quit()
