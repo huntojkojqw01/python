@@ -15,140 +15,72 @@ import math
 import scipy
 import scipy.io
 import scipy.io.wavfile as wavfile
-
+from toshokan import File, Frame, Tieng
+from sekkei import Config
+import os, time
 mainWindow=Tk()
 
 fig, ax = plt.subplots(2, 1, num='Sound Diagram')
 fig.suptitle('wav file', fontsize=20)
-FRAME_DURATION = 0.04
-frame_length = None
-time_array = None
-filename = "./khoosoothunhus.wav"
-data = None
-fs = None
-toa_do_frame = 0 # index cua phan tu trong mang energy_array.
-energy_array = None
-energy_index = None
-sem=None 
-def show():  
-  global data,fs,filename,ax,fig,time_array,frame_length
-  
+
+config = Config()
+toa_do_frame = 0
+sem = None
+def show():
+  global fai  
   filename =  filedialog.askopenfilename(initialdir = "./",
     title = "Choose your file",
     filetypes = (("wav files","*.wav"),("mp3 files","*.mp3"),("all files","*.*")))  
   
-  try:
-    fs, data = wavfile.read(filename)
+  try:    
+    if not os.path.isfile(filename):      
+      filename = config.ten_file
+    else:
+      config.ten_file = filename
+    fai = File(filename)
   except (TypeError, FileNotFoundError):
     print("Chua chon file hop le.")
-    return None
-  data = data / (2. ** 15)    
-  time_array=arange(0, len(data)) / fs
-  
-  time = (float)(len(data) / fs);
-  print("Fs: ", fs)
-  print("Data: ", data)    
-  print("Length: ", len(data))
+    return None 
+   
+  time = fai.time()
+  print("Fs: ", fai.sample_rate())
+  print("Data: ", fai.data())    
+  print("Length: ", fai.length())
   print("Time: ", time)
-  ax[0].plot(time_array, data)      
-  ax[0].set_xlabel('Time(s)')
-  ax[0].set_ylabel('Amplitude')
-  fig.show()    
-def xac_dinh_khoang_lang():
-  global data,fs,filename,ax,fig,time_array,frame_length,energy_array,energy_index
-  if fs == None:
-    return None
   ax[0].clear()
   fig.show()  
-  ax[0].plot(time_array, data, color="blue")      
-  ax[0].set_xlabel('Time(s)')
-  ax[0].set_ylabel('Amplitude')   
+  fai.show(ax[0])  
+  fig.show()    
+def xac_dinh_khoang_lang():
+  ax[0].clear()
+  fig.show()
+  fai.show(ax[0])
   
-  # Lay frame length tu tren giao dien:  
-  try:
-    tmp = float(entry.get())
-    if tmp <= 0:
-      return None
-    else:
-      frame_length = int(tmp * fs)
-  except ValueError:
-    # print("Oops!  Hay nhap gia tri frame length hop le vao !")      
-    frame_length = int(FRAME_DURATION * fs)
-  #----------------------------------------  
+  frame_length = config.do_dai_frame
   print("Frame length: ", frame_length)
-
-  data_length = len(data)
-  if data_length % frame_length == 0:
-    number_of_frame = int(data_length / frame_length)
-  else:
-    number_of_frame = int(data_length / frame_length) + 1  
-  print("Number frame: ", number_of_frame)
   
-  energy_array = []
-  energy_index = []  
-  half_frame_length = (int)(frame_length/2)
-
-  for i in range(0, data_length, half_frame_length):    
-    if i + half_frame_length >= data_length:
-      energy_array.append(sum(np.power(data[i:data_length], 2)))
-    else:
-      energy_array.append(sum(np.power(data[i:(i + half_frame_length)], 2)))
-  print("Do dai mang nang luong: ", np.array(energy_array).size)
+  frames = fai.frames(frame_length)
+  print("Number of frames: ", np.array(frames).size)  
   
-  dang_trong_khoang_lang = True # tuc la dang trong khoang lang, khong co tieng noi.
-
-  # Lay gia tri nguong nang luong tu giao dien:
-  nguong_nang_luong = None
-  try:
-    nguong_nang_luong = (float)(entry2.get())
-    if nguong_nang_luong <= 0:
-      return None    
-  except ValueError:
-    # print("Oops!  Hay nhap gia tri muc nang luong hop le vao !")
-    nguong_nang_luong = 0.5  
-  #-----------
+  dang_trong_khoang_lang = True # tuc la dang trong khoang lang, khong co tieng noi.  
+  nguong_nang_luong = config.nguong_nang_luong
+  fs = fai.sample_rate()
   diem_dau = diem_cuoi = 0
-  for i in range(0, len(energy_array)):
-    if i == len(energy_array) - 1:
-      nang_luong_cua_frame_nay = math.sqrt(energy_array[i] )
-    else:
-      nang_luong_cua_frame_nay = math.sqrt(energy_array[i] + energy_array[i + 1])
-    toa_do_thoi_gian_cua_frame_nay = i * half_frame_length
-    if nang_luong_cua_frame_nay >= nguong_nang_luong:
-      energy_index.append(i * half_frame_length)
-      if dang_trong_khoang_lang:          
-        # ax[0].axvline(x=toa_do_thoi_gian_cua_frame_nay / fs, color='black', linestyle='-')
-        diem_dau = toa_do_thoi_gian_cua_frame_nay
+  for frame in frames:       
+    if frame.nang_luong() >= nguong_nang_luong:      
+      if dang_trong_khoang_lang:        
+        diem_dau = frame.toa_do()
         dang_trong_khoang_lang = False                
     else:
-      if not dang_trong_khoang_lang:
-        # ax[0].axvline(x=toa_do_thoi_gian_cua_frame_nay / fs, color='black', linestyle='-')
-        diem_cuoi = toa_do_thoi_gian_cua_frame_nay
-        ax[0].plot(time_array[diem_dau:diem_cuoi], data[diem_dau:diem_cuoi], color="red")
+      if not dang_trong_khoang_lang:        
+        diem_cuoi = frame.toa_do()        
         ax[0].axvspan(diem_dau / fs, diem_cuoi / fs, facecolor='g', alpha=0.5)
         dang_trong_khoang_lang = True
-  if not dang_trong_khoang_lang:    
-    # ax[0].axvline(x=toa_do_thoi_gian_cua_frame_nay / fs, color='black', linestyle='--')
-    diem_cuoi = toa_do_thoi_gian_cua_frame_nay
-    ax[0].plot(time_array[diem_dau:diem_cuoi], data[diem_dau:diem_cuoi], color="red")
+  if not dang_trong_khoang_lang:   
+    diem_cuoi = frame.toa_do()    
     ax[0].axvspan(diem_dau / fs, diem_cuoi / fs, facecolor='g', alpha=0.5)
   fig.show()
 
-def ham_tu_tuong_quan_R_k(frame_length, array): # i la chi so bat dau cua frame dang xet.
-  N = frame_length
-  K = (int)(4*N/5)
-
-  R = []
-  for k in range(0, K):
-    sum = 0
-    for n in range(0, N - k):
-      sum += array[n] * array[n + k]
-    R.append(sum)  
-  return R
-def cuc_dai_tiep_theo_cua_R(array):
-  array_length = len(array)
-  cuc_tieu_dau_tien = array.index(min(array[1:array_length]))
-  return array.index(max(array[cuc_tieu_dau_tien+1:array_length]))
 def tinh_f0():
   global data,fs,filename,ax,fig,time_array,frame_length,energy_array,energy_index
   if fs == None:
@@ -202,32 +134,65 @@ def tinh_f0():
       # danh_sach_tan_so.append(1.0/chu_ky)         
   # axs[2].plot(danh_sach_tan_so)
   fig.show()
-def tuong_quan_frame_ke_tiep():
-  global data,fs,frame_length,toa_do_frame,sem,energy_index
-  if fs == None or frame_length == None:
-    return  None
-  half_frame_length = int(frame_length/2)
-  if sem != None:
+def ve_tuong_quan_ben_canh(huong):
+  global toa_do_frame, sem  
+  frame_length = config.do_dai_frame
+  half_frame_length = frame_length  >> 1
+  if not sem is None:
     sem.remove()
-    ax[1].clear()
-    fig.show()
-  vi_tri_dang_xet = energy_index[toa_do_frame]
-  sem=ax[0].axvline(x=vi_tri_dang_xet / fs, color='black', linestyle='-')
-  i = vi_tri_dang_xet
-  t = ham_tu_tuong_quan_R_k(frame_length, data[i:i+frame_length])
-  chu_ky = cuc_dai_tiep_theo_cua_R(t)
-  ax[1].plot(t)        
-  ax[1].axvline(x=chu_ky, color='orange', linestyle='-')        
-  print("Tan so la",1.0/chu_ky)                
-  if toa_do_frame < len(energy_index) - 1:
-    toa_do_frame += 1
+  ax[1].clear()
   fig.show()
 
+  frames = fai.frames(frame_length)
+
+  if huong == 0:
+    if toa_do_frame > 0:
+      toa_do_frame -= 1
+  else:
+    if toa_do_frame < len(frames) - 1:
+      toa_do_frame += 1
+
+  current_frame = frames[toa_do_frame]
+  vi_tri_dang_xet = current_frame.toa_do()
+  fs = fai.sample_rate()
+  sem = ax[0].axvline(x=vi_tri_dang_xet / fs, color='black', linestyle='-')  
+  ax[1].plot(current_frame.ham_ttq())        
+  ax[1].axvline(x=current_frame.chu_ky(), color='orange', linestyle='-')        
+  print("Tan so la", current_frame.tan_so_co_ban(fs))  
+  fig.show()
+
+def choi():  
+  fai.play()
+
+def thiet_lap():
+  try:
+    tmp = (int)(entry.get())
+    if 0 < tmp and tmp < fai.length():
+      config.do_dai_frame = tmp          
+  except ValueError:
+    pass
+  try:
+    tmp = (int)(entry2.get())
+    if 0 < tmp:
+      config.nguong_nang_luong = tmp
+  except ValueError: 
+    pass
 def quit():
   mainWindow.quit()
 
+def onclick(event):
+  global toa_do_frame  
+  if event.inaxes is ax[0] and 0 <= event.xdata and event.xdata <= fai.length() / fai.sample_rate():    
+    frame_length = config.do_dai_frame
+    index = int(event.xdata * fai.sample_rate())
+    toa_do_frame = math.floor(index * 2 / frame_length )
+    if not sem is None: # neu dang ve thi ve lai voi vi tri moi.
+      ve_tuong_quan_ben_canh(0)
+fig.canvas.mpl_connect('button_press_event', onclick)
+
 # DANH SACH CAC THANH PHAN CUA GIAO DIEN:
 
+Button(mainWindow, text="Play", command=choi).grid(row=1, column=0)
 button=Button(mainWindow,text="Chon file wav",command=show).grid(row=1,column=1)
 
 label=Label(mainWindow,text="Do dai frame").grid(row=2,column=0)
@@ -240,12 +205,15 @@ label2=Label(mainWindow,text="Muc nang luong").grid(row=3,column=0)
 entry2 = Entry(mainWindow)
 entry2.grid(row=3,column=1)
 
-button2=Button(mainWindow,text="Xac dinh khoang lang",command=xac_dinh_khoang_lang).grid(row=4,column=1)
+button2=Button(mainWindow,text="Thiet lap config",command=thiet_lap).grid(row=4,column=1)
 
-button3=Button(mainWindow,text="Tinh tan so f0",command=tinh_f0).grid(row=5,column=1)
-button4=Button(mainWindow,text=">",command=tuong_quan_frame_ke_tiep).grid(row=5,column=2)
+button3=Button(mainWindow,text="Xac dinh khoang lang",command=xac_dinh_khoang_lang).grid(row=5,column=1)
 
-mainWindow.geometry('310x160+10+10')
+button4=Button(mainWindow,text="<",command=lambda: ve_tuong_quan_ben_canh(0)).grid(row=6,column=0)
+button5=Button(mainWindow,text="Hien thi f0",command=tinh_f0).grid(row=6,column=1)
+button6=Button(mainWindow,text=">",command=lambda: ve_tuong_quan_ben_canh(1)).grid(row=6,column=2)
+
+mainWindow.geometry('310x200+10+10')
 mainWindow.title("Xu li am thanh")
-Button(mainWindow,text="Thoat",command=quit).grid(row=6,column=1)
+Button(mainWindow,text="Thoat",command=quit).grid(row=7,column=1)
 mainWindow.mainloop()
