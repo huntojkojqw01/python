@@ -82,57 +82,35 @@ def xac_dinh_khoang_lang():
   fig.show()
 
 def tinh_f0():
-  global data,fs,filename,ax,fig,time_array,frame_length,energy_array,energy_index
-  if fs == None:
-    return None
+  if not sem is None:
+    sem.remove()
   ax[1].clear()
-  fig.show()  
+  fig.show()
   
-  # Lay frame length tu tren giao dien:  
-  try:
-    tmp = float(entry.get())
-    if tmp <= 0:
-      return None
-    else:
-      frame_length = int(tmp * fs)
-  except ValueError:
-    # print("Oops!  Hay nhap gia tri frame length hop le vao !")      
-    frame_length = int(FRAME_DURATION * fs)
-  #----------------------------------------  
-
-  data_length = len(data)
-  if data_length % frame_length == 0:
-    number_of_frame = int(data_length / frame_length)
-  else:
-    number_of_frame = int(data_length / frame_length) + 1
-
+  frame_length = config.do_dai_frame
   print("Frame length: ", frame_length)
-  print("Number frame: ", number_of_frame)
   
-  if energy_array == None or len(energy_array) == 0:
-    return None 
-  half_frame_length = (int)(frame_length/2)
-  # Lay gia tri nguong nang luong tu giao dien:
-  nguong_nang_luong = None
-  try:
-    nguong_nang_luong = (float)(entry2.get())
-    if nguong_nang_luong <= 0:
-      return None    
-  except ValueError:
-    # print("Oops!  Hay nhap gia tri muc nang luong hop le vao !")
-    nguong_nang_luong = 2  
-  #-----------  
-  count = 0
-  # danh_sach_tan_so = []
-  for i in energy_index:
-    chi_so = energy_index.index(i)
-    if chi_so == len(energy_index) - 1:
-      t = ham_tu_tuong_quan_R_k(frame_length, data[i:len(data)])
+  frames = fai.frames(frame_length)
+  print("Number of frames: ", np.array(frames).size)  
+  
+  dang_trong_khoang_lang = True # tuc la dang trong khoang lang, khong co tieng noi.  
+  nguong_nang_luong = config.nguong_nang_luong
+  fs = fai.sample_rate()
+  x_data = []
+  y_data = []
+  for frame in frames:       
+    if frame.nang_luong() >= nguong_nang_luong:      
+      if dang_trong_khoang_lang:        
+        dang_trong_khoang_lang = False
+      else:
+        x_data.append(frame.toa_do() / fs)
+        y_data.append(frame.tan_so_co_ban(fs))        
     else:
-      t = ham_tu_tuong_quan_R_k(frame_length, data[i:i+frame_length])
-    chu_ky = cuc_dai_tiep_theo_cua_R(t)
-      # danh_sach_tan_so.append(1.0/chu_ky)         
-  # axs[2].plot(danh_sach_tan_so)
+      if not dang_trong_khoang_lang:        
+        dang_trong_khoang_lang = True
+
+  ax[1].scatter(x_data, y_data, s=5, c='blue')
+  ax[1].set_ylim(0, 600)  
   fig.show()
 def ve_tuong_quan_ben_canh(huong):
   global toa_do_frame, sem  
