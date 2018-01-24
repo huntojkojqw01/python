@@ -1,5 +1,5 @@
-do_dai_frame: 640
+do_dai_frame: 160
 ho_va_ten: Nguyễn Đình Hùng
 ma_so_sinh_vien: '20131879'
-nguong_nang_luong: 11000
-ten_file: khoosoothunhus.wav
+nguong_nang_luong: 20000
+ten_file: /home/o0o/Py/gr/khoosoothunhus.wav
